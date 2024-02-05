@@ -2,7 +2,14 @@ import readline from "readline";
 import os from "os";
 import path from "path";
 
-import { copyFile, mkdir, readdir, readFile, writeFile } from "fs/promises";
+import {
+  copyFile,
+  mkdir,
+  readdir,
+  readFile,
+  writeFile,
+  rename,
+} from "fs/promises";
 import { createReadStream } from "fs";
 const rl = readline.createInterface({
   input: process.stdin,
@@ -90,11 +97,30 @@ const cat = async (string) => {
 
 const add = async (string) => {
   try {
-    console.log(string);
-    console.log(process.cwd());
+    // console.log(string);
+    // console.log(process.cwd());
     const filePath = path.join(process.cwd(), string);
 
     await writeFile(filePath, "", { flag: "wx" });
+  } catch (err) {
+    // throw new Error("FS operation failed");
+    console.log(err);
+  }
+};
+const rn = async (name, changedName) => {
+  const folderPath = process.cwd();
+  try {
+    const filesNames = await readdir(folderPath);
+    if (filesNames.includes(name)) {
+      await rename(
+        path.join(process.cwd(), name),
+        path.join(process.cwd(), changedName)
+      );
+      console.log("Updated");
+    } else {
+      console.log("1");
+      //   throw new Error("FS operation failed");
+    }
   } catch (err) {
     // throw new Error("FS operation failed");
     console.log(err);
@@ -126,6 +152,8 @@ const startFileManager = () => {
       await cat(input.trim().split(" ")[1]);
     } else if (input.trim().toLowerCase().startsWith("add ")) {
       await add(input.trim().split(" ")[1]);
+    } else if (input.trim().toLowerCase().startsWith("rn ")) {
+      await rn(input.trim().split(" ")[1], input.trim().split(" ")[2]);
     } else {
       console.log("Invalid input");
     }
