@@ -1,7 +1,9 @@
 import readline from "readline";
 import os from "os";
 import path from "path";
+import { createGzip, createGunzip } from "zlib";
 import { createHash } from "crypto";
+import { pipeline } from "stream/promises";
 import {
   copyFile,
   mkdir,
@@ -204,6 +206,21 @@ const hash = async (path) => {
     // throw new Error("FS operation failed");
   }
 };
+
+const compress = async (pathFrom, pathTo) => {
+  const gzip = createGzip();
+  const source = createReadStream(path.resolve(os.homedir(), pathFrom));
+  const destination = createWriteStream(path.resolve(os.homedir(), pathTo));
+  await pipeline(source, gzip, destination);
+  console.log("Done");
+};
+const decompress = async (pathFrom, pathTo) => {
+  const gzip = createGunzip();
+  const source = createReadStream(path.resolve(os.homedir(), pathFrom));
+  const destination = createWriteStream(path.resolve(os.homedir(), pathTo));
+  await pipeline(source, gzip, destination);
+  console.log("Done");
+};
 const startFileManager = () => {
   const homeDirectory = os.homedir();
   try {
@@ -240,6 +257,10 @@ const startFileManager = () => {
       osFunc(input.trim().split(" ")[1]);
     } else if (input.trim().toLowerCase().startsWith("hash ")) {
       await hash(input.trim().split(" ")[1]);
+    } else if (input.trim().toLowerCase().startsWith("compress ")) {
+      await compress(input.trim().split(" ")[1], input.trim().split(" ")[2]);
+    } else if (input.trim().toLowerCase().startsWith("decompress ")) {
+      await decompress(input.trim().split(" ")[1], input.trim().split(" ")[2]);
     } else {
       console.log("Invalid input");
     }
