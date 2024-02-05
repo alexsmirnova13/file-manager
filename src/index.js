@@ -2,7 +2,7 @@ import readline from "readline";
 import os from "os";
 import path from "path";
 
-import { copyFile, mkdir, readdir } from "fs/promises";
+import { copyFile, mkdir, readdir, readFile } from "fs/promises";
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
@@ -18,7 +18,15 @@ const up = () => {
 };
 
 const cd = (string) => {
-  const newDirectory = path.resolve(process.cwd(), string);
+  let newDirectory;
+
+  if (string.startsWith("\\") || string.startsWith("/")) {
+    const cuttedStr = string.slice(1);
+    newDirectory = path.resolve(process.cwd(), cuttedStr);
+  } else {
+    newDirectory = path.resolve(process.cwd(), string);
+  }
+
   process.chdir(newDirectory);
   console.log(`Moved to upper directory: ${process.cwd()}`);
 };
@@ -57,6 +65,26 @@ const ls = async () => {
   }
 };
 
+const cat = async (string) => {
+  console.log(string);
+  try {
+    let fileToRead;
+    if (string.startsWith("\\") || string.startsWith("/")) {
+      const cuttedStr = string.slice(1);
+      //   console.log(cuttedStr, "обрезанная строка");
+      //   newDirectory = path.resolve(process.cwd(), cuttedStr);
+      fileToRead = cuttedStr;
+      //   console.log(fileToRead);
+    } else {
+      fileToRead = string;
+    }
+    const fileData = await readFile(fileToRead, "utf-8");
+    console.log(fileData);
+  } catch (err) {
+    // throw new Error("FS operation failed");
+    console.log(err);
+  }
+};
 const startFileManager = () => {
   const homeDirectory = os.homedir();
   try {
@@ -79,6 +107,9 @@ const startFileManager = () => {
       cd(input.trim().split(" ")[1]);
     } else if (input.trim().toLowerCase() === "ls") {
       await ls();
+    } else if (input.trim().toLowerCase().startsWith("cat ")) {
+      await cat(input.trim().split(" ")[1]);
+      //   console.log(process.argv);
     } else {
       console.log("Invalid input");
     }
