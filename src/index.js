@@ -1,226 +1,27 @@
 import readline from "readline";
 import os from "os";
-import path from "path";
-import { createGzip, createGunzip } from "zlib";
-import { createHash } from "crypto";
-import { pipeline } from "stream/promises";
-import {
-  copyFile,
-  mkdir,
-  readdir,
-  readFile,
-  rm,
-  writeFile,
-  rename,
-} from "fs/promises";
-import { createReadStream, createWriteStream } from "fs";
+
+import up from "./functions/up.js";
+import cd from "./functions/cd.js";
+import ls from "./functions/ls.js";
+import cat from "./functions/cat.js";
+import add from "./functions/add.js";
+import rn from "./functions/rn.js";
+import cp from "./functions/cp.js";
+import mv from "./functions/mv.js";
+import osFunc from "./functions/os.js";
+import hash from "./functions/hash.js";
+import compress from "./functions/compress.js";
+import decompress from "./functions/decompress.js";
+import { colors } from "./utils.js";
+import { rm } from "./functions/rm.js";
+// import { colors } from "./utils.js";
+
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
 });
-const up = () => {
-  const parentDir = path.dirname(process.cwd());
-  try {
-    process.chdir(parentDir);
-    console.log(`Moved to upper directory: ${process.cwd()}`); // нельзя подняться выше хоум директории?
-  } catch (error) {
-    console.error(`Error moving to upper directory: ${error.message}`);
-  }
-};
 
-const cd = (string) => {
-  let newDirectory;
-
-  if (string.startsWith("\\") || string.startsWith("/")) {
-    const cuttedStr = string.slice(1);
-    newDirectory = path.resolve(process.cwd(), cuttedStr);
-  } else {
-    newDirectory = path.resolve(process.cwd(), string);
-  }
-
-  process.chdir(newDirectory);
-  console.log(`Moved to upper directory: ${process.cwd()}`);
-};
-
-const ls = async () => {
-  try {
-    const listFiles = await readdir(process.cwd(), {
-      withFileTypes: true,
-    });
-
-    const listTable = listFiles
-      .filter((item) => {
-        return item.isFile() || item.isDirectory();
-      })
-      .map((item) => {
-        return {
-          Name: item.name,
-          Type: item.isFile() ? "file" : "directory",
-        };
-      });
-
-    if (listTable.length) {
-      const byTypeAndName = (a, b) => {
-        if (a.Type > b.Type) return 1;
-        if (a.Type < b.Type) return -1;
-        if (a.Name.toLowerCase() > b.Name.toLowerCase()) return 1;
-        return -1;
-      };
-      listTable.sort(byTypeAndName);
-      console.table(listToView);
-    } else {
-      console.log("Current directory is empty");
-    }
-  } catch (err) {
-    throw new Error(err.message);
-  }
-};
-
-const cat = async (string) => {
-  try {
-    let fileToRead;
-    if (string.startsWith("\\") || string.startsWith("/")) {
-      const cuttedStr = string.slice(1);
-      fileToRead = cuttedStr;
-    } else {
-      fileToRead = string;
-    }
-    const stream = createReadStream(fileToRead);
-    const chunks = [];
-    for await (const chunk of stream) {
-      chunks.push(Buffer.from(chunk));
-    }
-    const fileData = Buffer.concat(chunks).toString("utf-8");
-    console.log(fileData);
-  } catch (err) {
-    throw new Error("FS operation failed");
-    // console.log(err);
-  }
-};
-
-const add = async (string) => {
-  try {
-    // console.log(string);
-    // console.log(process.cwd());
-    const filePath = path.join(process.cwd(), string);
-
-    await writeFile(filePath, "", { flag: "wx" });
-  } catch (err) {
-    // throw new Error("FS operation failed");
-    console.log(err);
-  }
-};
-const rn = async (name, changedName) => {
-  // поменять вместо name будет путь до файла
-  const folderPath = process.cwd();
-  try {
-    const filesNames = await readdir(folderPath);
-    if (filesNames.includes(name)) {
-      await rename(
-        path.join(process.cwd(), name),
-        path.join(process.cwd(), changedName)
-      );
-      console.log("Updated");
-    } else {
-      console.log("1");
-      //   throw new Error("FS operation failed");
-    }
-  } catch (err) {
-    // throw new Error("FS operation failed");
-    console.log(err);
-  }
-};
-const cp = async (fileDir, fileNewDir) => {
-  // const homeDir=os.homedir
-  const fileOldDir = path.resolve(os.homedir(), fileDir);
-  const fileNewDirectory = path.resolve(os.homedir(), fileNewDir);
-
-  try {
-    const streamFrom = createReadStream(fileOldDir);
-    const streamTo = createWriteStream(fileNewDirectory);
-    streamFrom.pipe(streamTo);
-    console.log("Done");
-  } catch (err) {
-    console.log(err);
-    // throw new Error("Operation failed : " + err.message);
-  }
-};
-const mv = async (fileDir, fileNewDir) => {
-  // const homeDir=os.homedir
-  const fileOldDir = path.resolve(os.homedir(), fileDir);
-  const fileNewDirectory = path.resolve(os.homedir(), fileNewDir);
-
-  try {
-    const streamFrom = createReadStream(fileOldDir);
-    const streamTo = createWriteStream(fileNewDirectory);
-    streamFrom.pipe(streamTo);
-    await rm(fileOldDir);
-    console.log("Done");
-  } catch (err) {
-    console.log(err);
-    // throw new Error("Operation failed : " + err.message);
-  }
-};
-
-const osFunc = (command) => {
-  switch (command) {
-    case "--EOL":
-      console.log("End-Of-Line (EOL):", os.EOL);
-      break;
-    case "--cpus":
-      const cpus = os.cpus();
-      console.log("CPUs Information:");
-      cpus.forEach((cpu, index) => {
-        console.log(
-          `CPU ${index + 1}: Model - ${cpu.model}, Clock rate - ${
-            cpu.speed / 1000
-          } GHz`
-        );
-      });
-      console.log("Total CPUs:", cpus.length);
-      break;
-    case "--homedir":
-      console.log("Home Directory:", os.homedir());
-      break;
-    case "--username":
-      console.log("Current System User Name:", os.userInfo().username);
-      break;
-    case "--architecture":
-      console.log("CPU Architecture:", os.arch());
-      break;
-    default:
-      console.log(
-        "Invalid argument. Please use one of the following: --EOL, --cpus, --homedir, --username, --architecture"
-      );
-  }
-};
-
-const hash = async (path) => {
-  try {
-    const data = await readFile(path);
-    const hash = createHash("sha256").update(data);
-    const hex = hash.digest("hex");
-    console.log(hex);
-  } catch (err) {
-    console.log(err);
-    // throw new Error("FS operation failed");
-  }
-};
-
-const compress = async (pathFrom, pathTo) => {
-  const gzip = createGzip();
-  const source = createReadStream(path.resolve(os.homedir(), pathFrom));
-  const destination = createWriteStream(path.resolve(os.homedir(), pathTo));
-  await pipeline(source, gzip, destination);
-  console.log("Done");
-};
-const decompress = async (pathFrom, pathTo) => {
-  const gzip = createGunzip();
-  const source = createReadStream(path.resolve(os.homedir(), pathFrom));
-  const destination = createWriteStream(path.resolve(os.homedir(), pathTo));
-  await pipeline(source, gzip, destination);
-  console.log("Done");
-};
 const startFileManager = () => {
   const homeDirectory = os.homedir();
   try {
@@ -231,43 +32,143 @@ const startFileManager = () => {
   const userName = process.argv
     .find((arg) => arg.startsWith("--"))
     .split("=")[1]; // ловить ошибки,если нет аргументов
-  console.log(`Welcome to the File Manager, ${userName}!`);
-  console.log(`You are currently in ${process.cwd()}`);
+  console.log(
+    colors.default +
+      colors.bold +
+      `Welcome to the File Manager, ${userName}!` +
+      colors.user
+  );
+  console.log(
+    colors.system +
+      colors.bold +
+      `You are currently in ${process.cwd()}` +
+      colors.user
+  );
   rl.on("line", async (input) => {
-    if (input.trim().toLowerCase() === "exit") {
-      console.log("Goodbye!");
+    if (input.trim().toLowerCase() === ".exit") {
       rl.close();
     } else if (input.trim().toLowerCase() === "up") {
       up();
-    } else if (input.trim().toLowerCase().startsWith("cd ")) {
+      console.log(
+        colors.system +
+          colors.bold +
+          `You are currently in ${process.cwd()}` +
+          colors.user
+      );
+    } else if (input.trim().toLowerCase().split(" ")[0] === "cd") {
       cd(input.trim().split(" ")[1]);
+      console.log(
+        colors.system +
+          colors.bold +
+          `You are currently in ${process.cwd()}` +
+          colors.user
+      );
     } else if (input.trim().toLowerCase() === "ls") {
       await ls();
-    } else if (input.trim().toLowerCase().startsWith("cat ")) {
+      console.log(
+        colors.system +
+          colors.bold +
+          `You are currently in ${process.cwd()}` +
+          colors.user
+      );
+    } else if (input.trim().toLowerCase().split(" ")[0] === "cat") {
       await cat(input.trim().split(" ")[1]);
-    } else if (input.trim().toLowerCase().startsWith("add ")) {
+      console.log(
+        colors.system +
+          colors.bold +
+          `You are currently in ${process.cwd()}` +
+          colors.user
+      );
+    } else if (input.trim().toLowerCase().split(" ")[0] === "add") {
       await add(input.trim().split(" ")[1]);
-    } else if (input.trim().toLowerCase().startsWith("rn ")) {
+      console.log(
+        colors.system +
+          colors.bold +
+          `You are currently in ${process.cwd()}` +
+          colors.user
+      );
+    } else if (input.trim().toLowerCase().split(" ")[0] === "rn") {
       await rn(input.trim().split(" ")[1], input.trim().split(" ")[2]);
-    } else if (input.trim().toLowerCase().startsWith("cp ")) {
+      console.log(
+        colors.system +
+          colors.bold +
+          `You are currently in ${process.cwd()}` +
+          colors.user
+      );
+    } else if (input.trim().toLowerCase().split(" ")[0] === "cp") {
       await cp(input.trim().split(" ")[1], input.trim().split(" ")[2]);
-    } else if (input.trim().toLowerCase().startsWith("mv ")) {
+      console.log(
+        colors.system +
+          colors.bold +
+          `You are currently in ${process.cwd()}` +
+          colors.user
+      );
+    } else if (input.trim().toLowerCase().split(" ")[0] === "mv") {
       await mv(input.trim().split(" ")[1], input.trim().split(" ")[2]);
-    } else if (input.trim().toLowerCase().startsWith("os ")) {
+      console.log(
+        colors.system +
+          colors.bold +
+          `You are currently in ${process.cwd()}` +
+          colors.user
+      );
+    } else if (input.trim().toLowerCase().split(" ")[0] === "rm") {
+      rm(input.trim().split(" ")[1]);
+      console.log(
+        colors.system +
+          colors.bold +
+          `You are currently in ${process.cwd()}` +
+          colors.user
+      );
+    } else if (input.trim().toLowerCase().split(" ")[0] === "os") {
       osFunc(input.trim().split(" ")[1]);
-    } else if (input.trim().toLowerCase().startsWith("hash ")) {
+      console.log(
+        colors.system +
+          colors.bold +
+          `You are currently in ${process.cwd()}` +
+          colors.user
+      );
+    } else if (input.trim().toLowerCase().split(" ")[0] === "hash") {
       await hash(input.trim().split(" ")[1]);
-    } else if (input.trim().toLowerCase().startsWith("compress ")) {
+      console.log(
+        colors.system +
+          colors.bold +
+          `You are currently in ${process.cwd()}` +
+          colors.user
+      );
+    } else if (input.trim().toLowerCase().split(" ")[0] === "compress") {
       await compress(input.trim().split(" ")[1], input.trim().split(" ")[2]);
-    } else if (input.trim().toLowerCase().startsWith("decompress ")) {
+      console.log(
+        colors.system +
+          colors.bold +
+          `You are currently in ${process.cwd()}` +
+          colors.user
+      );
+    } else if (input.trim().toLowerCase().split(" ")[0] === "decompress") {
       await decompress(input.trim().split(" ")[1], input.trim().split(" ")[2]);
+      console.log(
+        colors.system +
+          colors.bold +
+          `You are currently in ${process.cwd()}` +
+          colors.user
+      );
     } else {
-      console.log("Invalid input");
+      console.log(colors.error + colors.bold + "Invalid input" + colors.error);
+      console.log(
+        colors.system +
+          colors.bold +
+          `You are currently in ${process.cwd()}` +
+          colors.user
+      );
     }
   });
 
   process.on("exit", () => {
-    console.log(`\nThank you for using File Manager, ${userName}, goodbye!\n`);
+    console.log(
+      colors.default +
+        colors.bold +
+        `Thank you for using File Manager, ${userName}, goodbye!` +
+        colors.default
+    );
   });
 };
 
