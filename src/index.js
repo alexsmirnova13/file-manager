@@ -1,7 +1,7 @@
 import readline from "readline";
 import os from "os";
 import path from "path";
-
+import { createHash } from "crypto";
 import {
   copyFile,
   mkdir,
@@ -159,6 +159,51 @@ const mv = async (fileDir, fileNewDir) => {
     // throw new Error("Operation failed : " + err.message);
   }
 };
+
+const osFunc = (command) => {
+  switch (command) {
+    case "--EOL":
+      console.log("End-Of-Line (EOL):", os.EOL);
+      break;
+    case "--cpus":
+      const cpus = os.cpus();
+      console.log("CPUs Information:");
+      cpus.forEach((cpu, index) => {
+        console.log(
+          `CPU ${index + 1}: Model - ${cpu.model}, Clock rate - ${
+            cpu.speed / 1000
+          } GHz`
+        );
+      });
+      console.log("Total CPUs:", cpus.length);
+      break;
+    case "--homedir":
+      console.log("Home Directory:", os.homedir());
+      break;
+    case "--username":
+      console.log("Current System User Name:", os.userInfo().username);
+      break;
+    case "--architecture":
+      console.log("CPU Architecture:", os.arch());
+      break;
+    default:
+      console.log(
+        "Invalid argument. Please use one of the following: --EOL, --cpus, --homedir, --username, --architecture"
+      );
+  }
+};
+
+const hash = async (path) => {
+  try {
+    const data = await readFile(path);
+    const hash = createHash("sha256").update(data);
+    const hex = hash.digest("hex");
+    console.log(hex);
+  } catch (err) {
+    console.log(err);
+    // throw new Error("FS operation failed");
+  }
+};
 const startFileManager = () => {
   const homeDirectory = os.homedir();
   try {
@@ -191,6 +236,10 @@ const startFileManager = () => {
       await cp(input.trim().split(" ")[1], input.trim().split(" ")[2]);
     } else if (input.trim().toLowerCase().startsWith("mv ")) {
       await mv(input.trim().split(" ")[1], input.trim().split(" ")[2]);
+    } else if (input.trim().toLowerCase().startsWith("os ")) {
+      osFunc(input.trim().split(" ")[1]);
+    } else if (input.trim().toLowerCase().startsWith("hash ")) {
+      await hash(input.trim().split(" ")[1]);
     } else {
       console.log("Invalid input");
     }
