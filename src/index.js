@@ -1,10 +1,8 @@
-// const readline = require("readline");
 import readline from "readline";
-// const path = require("path");
-// import path from "path";
-// const os = require('os');
 import os from "os";
 import path from "path";
+
+import { copyFile, mkdir, readdir } from "fs/promises";
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
@@ -20,26 +18,49 @@ const up = () => {
 };
 
 const cd = (string) => {
-  //   console.log("-------------");
-  //   console.log(path.resolve(process.cwd(), string));
-
   const newDirectory = path.resolve(process.cwd(), string);
   process.chdir(newDirectory);
-  //   console.log(string);
-  //   console.log(process.cwd());
-  //   console.log("-------------");
   console.log(`Moved to upper directory: ${process.cwd()}`);
 };
 
+const ls = async () => {
+  try {
+    const listFiles = await readdir(process.cwd(), {
+      withFileTypes: true,
+    });
+
+    const listTable = listFiles
+      .filter((item) => {
+        return item.isFile() || item.isDirectory();
+      })
+      .map((item) => {
+        return {
+          Name: item.name,
+          Type: item.isFile() ? "file" : "directory",
+        };
+      });
+
+    if (listTable.length) {
+      const byTypeAndName = (a, b) => {
+        if (a.Type > b.Type) return 1;
+        if (a.Type < b.Type) return -1;
+        if (a.Name.toLowerCase() > b.Name.toLowerCase()) return 1;
+        return -1;
+      };
+      listTable.sort(byTypeAndName);
+      console.table(listToView);
+    } else {
+      console.log("Current directory is empty");
+    }
+  } catch (err) {
+    throw new Error(err.message);
+  }
+};
+
 const startFileManager = () => {
-  //   console.log("FileManager is now running. You can enter commands.");
-
   const homeDirectory = os.homedir();
-
   try {
     process.chdir(homeDirectory);
-    // console.log(`Changed to home directory: ${process.cwd()}`);
-    // console.log(`You are currently in ${process.cwd()}`); // добавлять везде
   } catch (error) {
     console.error(`Error changing to home directory: ${error.message}`);
   }
@@ -47,12 +68,8 @@ const startFileManager = () => {
     .find((arg) => arg.startsWith("--"))
     .split("=")[1]; // ловить ошибки,если нет аргументов
   console.log(`Welcome to the File Manager, ${userName}!`);
-  //   console.log(`You entered: ${input}`);
   console.log(`You are currently in ${process.cwd()}`);
-  rl.on("line", (input) => {
-    // console.log(input, "input");
-    // console.log(input.trim().toLowerCase().startsWith("cd"));
-    // console.log(input.trim().toLowerCase());
+  rl.on("line", async (input) => {
     if (input.trim().toLowerCase() === "exit") {
       console.log("Goodbye!");
       rl.close();
@@ -60,8 +77,9 @@ const startFileManager = () => {
       up();
     } else if (input.trim().toLowerCase().startsWith("cd ")) {
       cd(input.trim().split(" ")[1]);
+    } else if (input.trim().toLowerCase() === "ls") {
+      await ls();
     } else {
-      // Добавьте здесь логику обработки других команд
       console.log("Invalid input");
     }
   });
