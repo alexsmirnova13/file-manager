@@ -7,10 +7,11 @@ import {
   mkdir,
   readdir,
   readFile,
+  rm,
   writeFile,
   rename,
 } from "fs/promises";
-import { createReadStream } from "fs";
+import { createReadStream, createWriteStream } from "fs";
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
@@ -108,6 +109,7 @@ const add = async (string) => {
   }
 };
 const rn = async (name, changedName) => {
+  // поменять вместо name будет путь до файла
   const folderPath = process.cwd();
   try {
     const filesNames = await readdir(folderPath);
@@ -124,6 +126,37 @@ const rn = async (name, changedName) => {
   } catch (err) {
     // throw new Error("FS operation failed");
     console.log(err);
+  }
+};
+const cp = async (fileDir, fileNewDir) => {
+  // const homeDir=os.homedir
+  const fileOldDir = path.resolve(os.homedir(), fileDir);
+  const fileNewDirectory = path.resolve(os.homedir(), fileNewDir);
+
+  try {
+    const streamFrom = createReadStream(fileOldDir);
+    const streamTo = createWriteStream(fileNewDirectory);
+    streamFrom.pipe(streamTo);
+    console.log("Done");
+  } catch (err) {
+    console.log(err);
+    // throw new Error("Operation failed : " + err.message);
+  }
+};
+const mv = async (fileDir, fileNewDir) => {
+  // const homeDir=os.homedir
+  const fileOldDir = path.resolve(os.homedir(), fileDir);
+  const fileNewDirectory = path.resolve(os.homedir(), fileNewDir);
+
+  try {
+    const streamFrom = createReadStream(fileOldDir);
+    const streamTo = createWriteStream(fileNewDirectory);
+    streamFrom.pipe(streamTo);
+    await rm(fileOldDir);
+    console.log("Done");
+  } catch (err) {
+    console.log(err);
+    // throw new Error("Operation failed : " + err.message);
   }
 };
 const startFileManager = () => {
@@ -154,6 +187,10 @@ const startFileManager = () => {
       await add(input.trim().split(" ")[1]);
     } else if (input.trim().toLowerCase().startsWith("rn ")) {
       await rn(input.trim().split(" ")[1], input.trim().split(" ")[2]);
+    } else if (input.trim().toLowerCase().startsWith("cp ")) {
+      await cp(input.trim().split(" ")[1], input.trim().split(" ")[2]);
+    } else if (input.trim().toLowerCase().startsWith("mv ")) {
+      await mv(input.trim().split(" ")[1], input.trim().split(" ")[2]);
     } else {
       console.log("Invalid input");
     }
