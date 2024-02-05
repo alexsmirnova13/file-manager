@@ -2,7 +2,8 @@ import readline from "readline";
 import os from "os";
 import path from "path";
 
-import { copyFile, mkdir, readdir, readFile } from "fs/promises";
+import { copyFile, mkdir, readdir, readFile, writeFile } from "fs/promises";
+import { createReadStream } from "fs";
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
@@ -66,20 +67,34 @@ const ls = async () => {
 };
 
 const cat = async (string) => {
-  console.log(string);
   try {
     let fileToRead;
     if (string.startsWith("\\") || string.startsWith("/")) {
       const cuttedStr = string.slice(1);
-      //   console.log(cuttedStr, "обрезанная строка");
-      //   newDirectory = path.resolve(process.cwd(), cuttedStr);
       fileToRead = cuttedStr;
-      //   console.log(fileToRead);
     } else {
       fileToRead = string;
     }
-    const fileData = await readFile(fileToRead, "utf-8");
+    const stream = createReadStream(fileToRead);
+    const chunks = [];
+    for await (const chunk of stream) {
+      chunks.push(Buffer.from(chunk));
+    }
+    const fileData = Buffer.concat(chunks).toString("utf-8");
     console.log(fileData);
+  } catch (err) {
+    throw new Error("FS operation failed");
+    // console.log(err);
+  }
+};
+
+const add = async (string) => {
+  try {
+    console.log(string);
+    console.log(process.cwd());
+    const filePath = path.join(process.cwd(), string);
+
+    await writeFile(filePath, "", { flag: "wx" });
   } catch (err) {
     // throw new Error("FS operation failed");
     console.log(err);
@@ -109,7 +124,8 @@ const startFileManager = () => {
       await ls();
     } else if (input.trim().toLowerCase().startsWith("cat ")) {
       await cat(input.trim().split(" ")[1]);
-      //   console.log(process.argv);
+    } else if (input.trim().toLowerCase().startsWith("add ")) {
+      await add(input.trim().split(" ")[1]);
     } else {
       console.log("Invalid input");
     }
